@@ -14,23 +14,22 @@ import storyboardRoutes from './routes/storyboards';
 import characterRoutes from './routes/characters';
 import storyRoutes from './routes/stories';
 import sceneRoutes from './routes/scenes';
-import nsfwRoutes from './routes/nsfw';
 import dashboardRoutes from './routes/dashboard';
 import modelsRoutes from './routes/models';
 import creativeRoutes from './routes/creative';
 import videosRoutes from './routes/videos';
 import publishingRoutes from './routes/publishing';
 import roleplayRoutes from './routes/roleplay';
+import offlineRoutes from './routes/offline';
+import unrestrictedRoutes from './routes/unrestricted';
 
 const app = express();
 
-// Middleware
 app.use(cors(config.cors));
 app.use(pinoHttp());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -38,6 +37,7 @@ app.get('/health', (req, res) => {
 // Public routes
 app.use('/api/auth', authRoutes);
 app.use('/api/models', modelsRoutes);
+app.use('/api/offline', offlineRoutes);
 
 // Protected routes
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
@@ -45,17 +45,15 @@ app.use('/api/storyboards', authMiddleware, storyboardRoutes);
 app.use('/api/characters', authMiddleware, characterRoutes);
 app.use('/api/stories', authMiddleware, storyRoutes);
 app.use('/api/scenes', authMiddleware, sceneRoutes);
-app.use('/api/content/nsfw', authMiddleware, nsfwRoutes);
 app.use('/api/creative', authMiddleware, creativeRoutes);
 app.use('/api/videos', authMiddleware, videosRoutes);
 app.use('/api/publish', authMiddleware, publishingRoutes);
 app.use('/api/export', authMiddleware, publishingRoutes);
 app.use('/api/roleplay', authMiddleware, roleplayRoutes);
+app.use('/api/unrestricted', authMiddleware, unrestrictedRoutes);
 
-// Error handling
 app.use(errorHandler);
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
@@ -63,10 +61,16 @@ app.use((req, res) => {
 const PORT = config.port;
 
 app.listen(PORT, () => {
-  console.log(`🚀 API server running on port ${PORT}`);
-  console.log(`✨ Uncensored Model Support: ENABLED`);
-  console.log(`🔥 NSFW Roleplay AI: ACTIVE`);
-  console.log(`🎬 Video Generation: READY`);
+  console.log(`\n✨ === IMAGE-TO-VIDEO STORYBOOK STUDIO ===`);
+  console.log(`🚀 API Server running on port ${PORT}`);
+  console.log(`\n🔥 FEATURES ENABLED:`);
+  console.log(`  ✅ Uncensored Model Support`);
+  console.log(`  🔥 NSFW Roleplay AI Companion`);
+  console.log(`  🎬 Video Generation with Facial Accuracy`);
+  console.log(`  📱 Offline Model Support for Low-RAM Devices`);
+  console.log(`  💎 Adult Content Generation - NO RESTRICTIONS`);
+  console.log(`  🎯 Facial Preservation - MAXIMUM ACCURACY`);
+  console.log(`\n✨ READY FOR PRODUCTION\n`);
 });
 
 export default app;
