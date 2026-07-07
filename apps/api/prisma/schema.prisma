@@ -31,6 +31,7 @@ model User {
   auditLogs     AuditLog[]
   apiKeys       ApiKey[]
   userApiKeys   UserApiKey[]
+  mediaAssets   MediaAsset[]
   
   @@index([email])
   @@index([username])
@@ -98,7 +99,8 @@ model Story {
   characters String[] // Array of character IDs used in story
   
   scenes    Scene[]
-  
+  mediaAssets MediaAsset[]
+
   status    StoryStatus @default(DRAFT)
   nsfwScore Float @default(1.0)
   nsfwFlagged Boolean @default(false)
@@ -280,6 +282,32 @@ model UserApiKey {
   @@index([provider])
 }
 
+model MediaAsset {
+  id        String   @id @default(cuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  url       String   // URL or base64 data URI of the uploaded media
+  assetType MediaAssetType @default(IMAGE) // IMAGE or VIDEO
+  
+  label     String?  // User-friendly label (e.g., "Character A shot")
+  description String? // Auto-generated or user-provided description
+  metadata  String?  // JSON string with additional metadata (dimensions, etc.)
+
+  storyId   String?  // Optional link to a story this asset is used in
+  story     Story?   @relation(fields: [storyId], references: [id], onDelete: SetNull)
+
+  sceneOrder Int?    // Order in the story scene sequence
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([storyId])
+  @@index([assetType])
+}
+
 // Enums
 enum UserRole {
   ADMIN
@@ -368,4 +396,9 @@ enum NSFWAction {
   FLAG
   BLOCK
   BLUR
+}
+
+enum MediaAssetType {
+  IMAGE
+  VIDEO
 }

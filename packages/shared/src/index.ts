@@ -128,3 +128,58 @@ export interface ApiResponse<T = any> {
   error?: string;
   timestamp: string;
 }
+
+// ─── Media Asset Types ─────────────────────────────────────────────────────────
+
+export enum MediaAssetType {
+  IMAGE = "IMAGE",
+  VIDEO = "VIDEO",
+}
+
+export interface MediaAsset {
+  id: string;
+  userId: string;
+  url: string;
+  assetType: MediaAssetType;
+  label?: string;
+  description?: string;
+  metadata?: Record<string, any>;
+  storyId?: string;
+  sceneOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Build Story from Images Types ─────────────────────────────────────────────
+
+export interface BuildStoryFromImagesRequest {
+  title: string;
+  assetIds: string[]; // Ordered array of media asset IDs
+  genre: ContentGenre;
+  contentRating: ContentRating;
+  intimacyLevel: number; // 1-10, how explicit/intimate the content should be
+  storyDirection?: string; // Optional direction for the story
+  includeActType?: string; // e.g., "romantic", "passionate", "explicit", "sensual"
+  characterDescriptions?: string; // Optional text describing characters in the images
+  tags?: string[];
+}
+
+export interface BuildStoryFromImagesResponse {
+  story: any;
+  scenes: any[];
+  mediaAssets: MediaAsset[];
+  storyContent: string;
+}
+
+// ─── Image Analysis Types ──────────────────────────────────────────────────────
+
+export interface ImageAnalysisResult {
+  imageUrl: string;
+  assetId: string;
+  label: string;
+  description: string;
+  detectedElements: string[];
+  mood: string;
+  setting: string;
+  characterHints: string[];
+}

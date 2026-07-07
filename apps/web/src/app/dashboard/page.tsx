@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 interface DashboardStats {
   stats: {
@@ -18,7 +18,9 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const router = useRouter();
-  const [dashboardData, setDashboardData] = useState<DashboardStats | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardStats | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,25 +29,29 @@ export default function Dashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       setDashboardData(response.data);
     } catch (error) {
-      console.error('Failed to fetch dashboard:', error);
+      console.error("Failed to fetch dashboard:", error);
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -56,13 +62,28 @@ export default function Dashboard() {
             ✨ StoryBook Studio
           </h1>
           <div className="space-x-4">
-            <Link href="/dashboard/stories" className="text-white hover:text-purple-400">
+            <Link
+              href="/dashboard/stories"
+              className="text-white hover:text-purple-400"
+            >
               Stories
             </Link>
-            <Link href="/dashboard/characters" className="text-white hover:text-purple-400">
+            <Link
+              href="/dashboard/stories/build-from-images"
+              className="text-white hover:text-amber-400"
+            >
+              🎨 Image Story
+            </Link>
+            <Link
+              href="/dashboard/characters"
+              className="text-white hover:text-purple-400"
+            >
               Characters
             </Link>
-            <Link href="/dashboard/storyboards" className="text-white hover:text-purple-400">
+            <Link
+              href="/dashboard/storyboards"
+              className="text-white hover:text-purple-400"
+            >
               Storyboards
             </Link>
           </div>
@@ -74,29 +95,43 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-gradient-to-br from-purple-600 to-purple-900 p-6 rounded-lg">
             <p className="text-purple-200 text-sm mb-2">Storyboards</p>
-            <p className="text-4xl font-bold text-white">{dashboardData?.stats.storyboards || 0}</p>
+            <p className="text-4xl font-bold text-white">
+              {dashboardData?.stats.storyboards || 0}
+            </p>
           </div>
           <div className="bg-gradient-to-br from-pink-600 to-pink-900 p-6 rounded-lg">
             <p className="text-pink-200 text-sm mb-2">Stories</p>
-            <p className="text-4xl font-bold text-white">{dashboardData?.stats.stories || 0}</p>
+            <p className="text-4xl font-bold text-white">
+              {dashboardData?.stats.stories || 0}
+            </p>
           </div>
           <div className="bg-gradient-to-br from-blue-600 to-blue-900 p-6 rounded-lg">
             <p className="text-blue-200 text-sm mb-2">Characters</p>
-            <p className="text-4xl font-bold text-white">{dashboardData?.stats.characters || 0}</p>
+            <p className="text-4xl font-bold text-white">
+              {dashboardData?.stats.characters || 0}
+            </p>
           </div>
           <div className="bg-gradient-to-br from-green-600 to-green-900 p-6 rounded-lg">
             <p className="text-green-200 text-sm mb-2">Total Scenes</p>
-            <p className="text-4xl font-bold text-white">{dashboardData?.stats.totalScenes || 0}</p>
+            <p className="text-4xl font-bold text-white">
+              {dashboardData?.stats.totalScenes || 0}
+            </p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Link
             href="/dashboard/stories/new"
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg text-center transition"
           >
             ✍️ Create New Story
+          </Link>
+          <Link
+            href="/dashboard/stories/build-from-images"
+            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold py-3 px-6 rounded-lg text-center transition"
+          >
+            🎨 Build from Images
           </Link>
           <Link
             href="/dashboard/characters/new"
@@ -113,23 +148,28 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Stories */}
-        {dashboardData?.recentStories && dashboardData.recentStories.length > 0 && (
-          <div className="bg-gray-800/50 backdrop-blur border border-purple-500/20 rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-bold text-white mb-4">Recent Stories</h2>
-            <div className="space-y-2">
-              {dashboardData.recentStories.map((story) => (
-                <Link
-                  key={story.id}
-                  href={`/dashboard/stories/${story.id}`}
-                  className="block p-3 bg-purple-600/20 hover:bg-purple-600/40 rounded border border-purple-500/20 text-white transition"
-                >
-                  <p className="font-semibold">{story.title}</p>
-                  <p className="text-sm text-gray-300">Genre: {story.genre}</p>
-                </Link>
-              ))}
+        {dashboardData?.recentStories &&
+          dashboardData.recentStories.length > 0 && (
+            <div className="bg-gray-800/50 backdrop-blur border border-purple-500/20 rounded-lg p-6 mb-8">
+              <h2 className="text-xl font-bold text-white mb-4">
+                Recent Stories
+              </h2>
+              <div className="space-y-2">
+                {dashboardData.recentStories.map((story) => (
+                  <Link
+                    key={story.id}
+                    href={`/dashboard/stories/${story.id}`}
+                    className="block p-3 bg-purple-600/20 hover:bg-purple-600/40 rounded border border-purple-500/20 text-white transition"
+                  >
+                    <p className="font-semibold">{story.title}</p>
+                    <p className="text-sm text-gray-300">
+                      Genre: {story.genre}
+                    </p>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     </div>
   );

@@ -23,6 +23,8 @@ import offlineRoutes from "./routes/offline";
 import unrestrictedRoutes from "./routes/unrestricted";
 import nsfwRoutes from "./routes/nsfw";
 import userKeysRoutes from "./routes/user-keys";
+import mediaAssetsRoutes from "./routes/media-assets";
+import buildStoryRoutes from "./routes/build-story";
 
 const app = express();
 
@@ -63,6 +65,8 @@ app.use("/api/roleplay", authMiddleware, roleplayRoutes);
 app.use("/api/unrestricted", authMiddleware, unrestrictedRoutes);
 app.use("/api/content", authMiddleware, nsfwRoutes);
 app.use("/api/user/keys", authMiddleware, userKeysRoutes);
+app.use("/api/media-assets", authMiddleware, mediaAssetsRoutes);
+app.use("/api/stories", authMiddleware, buildStoryRoutes);
 
 // Error handling
 app.use(errorHandler);
