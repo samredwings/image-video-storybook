@@ -45,6 +45,7 @@ const GENRES = [
   "HORROR",
   "COMEDY",
   "OTHER",
+  "BANGLA_INCEST_CHOTI",
 ];
 
 const INTIMACY_LEVELS = [
@@ -96,6 +97,8 @@ export default function BuildStoryFromImages() {
     characterDescriptions: "",
     tags: "",
     createScenes: true,
+    language: "ENGLISH" as string,
+    chotiMode: false,
   });
 
   // Load existing user assets on mount
@@ -259,6 +262,8 @@ export default function BuildStoryFromImages() {
                   .filter(Boolean)
               : undefined,
             createScenes: form.createScenes,
+            language: form.language,
+            chotiMode: form.chotiMode,
           }),
         },
       );
@@ -484,7 +489,9 @@ export default function BuildStoryFromImages() {
                 >
                   {GENRES.map((g) => (
                     <option key={g} value={g}>
-                      {g}
+                      {g === "BANGLA_INCEST_CHOTI"
+                        ? "🇧🇩 Bangla Incest CHOTI"
+                        : g}
                     </option>
                   ))}
                 </select>
@@ -509,6 +516,52 @@ export default function BuildStoryFromImages() {
                   ))}
                 </select>
               </div>
+
+              {/* Language & CHOTI Mode */}
+              {(form.genre === "BANGLA_INCEST_CHOTI" ||
+                form.genre === "EROTICA") && (
+                <div className="p-3 bg-purple-900/20 border border-purple-500/20 rounded-lg space-y-3">
+                  <div>
+                    <label className="block text-white font-semibold text-sm mb-1">
+                      Language
+                    </label>
+                    <select
+                      value={form.language}
+                      onChange={(e) =>
+                        setForm({ ...form, language: e.target.value })
+                      }
+                      className="w-full bg-gray-900 border border-purple-500/30 rounded px-3 py-2 text-white focus:outline-none focus:border-purple-500 text-sm"
+                    >
+                      <option value="ENGLISH">English</option>
+                      <option value="BANGLA">🇧🇩 বাংলা (Bangla)</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-white font-semibold text-sm">
+                      CHOTI Mode
+                    </label>
+                    <button
+                      onClick={() =>
+                        setForm({ ...form, chotiMode: !form.chotiMode })
+                      }
+                      className={`relative w-12 h-6 rounded-full transition ${
+                        form.chotiMode ? "bg-pink-600" : "bg-gray-600"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition ${
+                          form.chotiMode ? "left-6" : "left-0.5"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  {form.chotiMode && (
+                    <p className="text-pink-400 text-xs">
+                      বাংলা চটি মোড — Bangla incest erotic fiction format
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Intimacy Level */}
               <div>

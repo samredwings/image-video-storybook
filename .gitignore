@@ -54,3 +54,6 @@ uploads/
 
 # Cache
 .cache/
+
+# TypeScript build info
+*.tsbuildinfo

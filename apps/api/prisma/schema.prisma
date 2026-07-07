@@ -341,6 +341,7 @@ enum StoryGenre {
   HORROR
   COMEDY
   OTHER
+  BANGLA_INCEST_CHOTI
 }
 
 enum ContentRating {

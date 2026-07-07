@@ -12,6 +12,12 @@ export enum ContentGenre {
   HORROR = "HORROR",
   COMEDY = "COMEDY",
   OTHER = "OTHER",
+  BANGLA_INCEST_CHOTI = "BANGLA_INCEST_CHOTI",
+}
+
+export enum ContentLanguage {
+  ENGLISH = "ENGLISH",
+  BANGLA = "BANGLA",
 }
 
 export enum ContentRating {
@@ -90,6 +96,8 @@ export interface StoryGenerationRequest {
   tags?: string[];
   temperature?: number;
   maxTokens?: number;
+  language?: ContentLanguage;
+  chotiMode?: boolean;
 }
 
 export interface CharacterProfile {
@@ -162,6 +170,8 @@ export interface BuildStoryFromImagesRequest {
   includeActType?: string; // e.g., "romantic", "passionate", "explicit", "sensual"
   characterDescriptions?: string; // Optional text describing characters in the images
   tags?: string[];
+  language?: ContentLanguage;
+  chotiMode?: boolean;
 }
 
 export interface BuildStoryFromImagesResponse {

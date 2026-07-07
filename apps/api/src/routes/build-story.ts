@@ -6,6 +6,8 @@ import {
   analyzeImageForStory,
   generateStoryFromImageAnalyses,
   generateText,
+  analyzeImageForStoryBangla,
+  generateBanglaStoryFromImageAnalyses,
 } from "../utils/ai-provider";
 
 const router = Router();
@@ -28,6 +30,7 @@ const buildStorySchema = z.object({
     "HORROR",
     "COMEDY",
     "OTHER",
+    "BANGLA_INCEST_CHOTI",
   ]),
   contentRating: z
     .enum(["G", "PG", "PG_13", "R", "NC_17", "X", "XXX"])
@@ -39,6 +42,8 @@ const buildStorySchema = z.object({
   tags: z.array(z.string()).optional(),
   createScenes: z.boolean().default(true),
   sceneDuration: z.number().default(5),
+  language: z.enum(["ENGLISH", "BANGLA"]).optional(),
+  chotiMode: z.boolean().optional(),
 });
 
 // ─── POST /api/stories/build-from-images ───────────────────────────────────────
@@ -135,13 +140,43 @@ router.post("/build-from-images", async (req: AuthRequest, res: Response) => {
     sendProgress("writing", 45, "Weaving images into a cohesive story...");
 
     // 3. Generate the story from analyzed images
-    const storyContent = await generateStoryFromImageAnalyses(analyses, {
-      genre: data.genre,
-      intimacyLevel: data.intimacyLevel,
-      includeActType: data.includeActType,
-      storyDirection: data.storyDirection,
-      characterDescriptions: data.characterDescriptions,
-    });
+    const isBanglaChoti =
+      data.genre === "BANGLA_INCEST_CHOTI" ||
+      data.language === "BANGLA" ||
+      data.chotiMode;
+
+    let storyContent: string;
+    if (isBanglaChoti) {
+      // Re-analyze images with Bangla context (or use existing English analyses if they're already rich enough)
+      // For best results, re-analyze with Bangla prompts
+      const banglaAnalyses = analyses.map((a, i) => ({
+        imageUrl: a.imageUrl,
+        label: a.label || `Scene ${i + 1}`,
+        description: a.description,
+        characters: a.characters,
+        setting: a.setting,
+        mood: a.mood,
+      }));
+
+      storyContent = await generateBanglaStoryFromImageAnalyses(
+        banglaAnalyses,
+        {
+          genre: data.genre,
+          intimacyLevel: data.intimacyLevel,
+          includeActType: data.includeActType,
+          storyDirection: data.storyDirection,
+          characterDescriptions: data.characterDescriptions,
+        },
+      );
+    } else {
+      storyContent = await generateStoryFromImageAnalyses(analyses, {
+        genre: data.genre,
+        intimacyLevel: data.intimacyLevel,
+        includeActType: data.includeActType,
+        storyDirection: data.storyDirection,
+        characterDescriptions: data.characterDescriptions,
+      });
+    }
 
     sendProgress("saving", 75, "Saving your story...");
 
@@ -303,13 +338,29 @@ router.post(
       }
 
       // Generate story
-      const storyContent = await generateStoryFromImageAnalyses(analyses, {
-        genre: data.genre,
-        intimacyLevel: data.intimacyLevel,
-        includeActType: data.includeActType,
-        storyDirection: data.storyDirection,
-        characterDescriptions: data.characterDescriptions,
-      });
+      const isBanglaChoti =
+        data.genre === "BANGLA_INCEST_CHOTI" ||
+        data.language === "BANGLA" ||
+        data.chotiMode;
+
+      let storyContent: string;
+      if (isBanglaChoti) {
+        storyContent = await generateBanglaStoryFromImageAnalyses(analyses, {
+          genre: data.genre,
+          intimacyLevel: data.intimacyLevel,
+          includeActType: data.includeActType,
+          storyDirection: data.storyDirection,
+          characterDescriptions: data.characterDescriptions,
+        });
+      } else {
+        storyContent = await generateStoryFromImageAnalyses(analyses, {
+          genre: data.genre,
+          intimacyLevel: data.intimacyLevel,
+          includeActType: data.includeActType,
+          storyDirection: data.storyDirection,
+          characterDescriptions: data.characterDescriptions,
+        });
+      }
 
       // Save story
       const story = await prisma.story.create({

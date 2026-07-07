@@ -6,6 +6,7 @@ import {
   generateText,
   generateTts,
   applyStyleTransfer,
+  getBanglaChotiSystemPrompt,
 } from "../utils/ai-provider";
 
 const router = Router();
@@ -22,6 +23,7 @@ const enhanceStorySchema = z.object({
     "extend_scenes",
     "increase_explicitness",
     "add_adult_content",
+    "convert_to_bangla_choti",
   ]),
   style: z.string().optional(),
   tone: z
@@ -264,10 +266,23 @@ async function enhanceStoryContent(
     extend_scenes: `Extend and elaborate on every scene with more detail, atmosphere, and sensory richness:\n\n${content}`,
     increase_explicitness: `Increase the explicitness and adult content of this story. Add detailed sensual and erotic scenes with vivid descriptions. Make it more mature and explicit:\n\n${content}`,
     add_adult_content: `Add mature adult content to this story. Include explicit sensual scenes, intimate encounters, and erotic descriptions. Make it professionally crafted adult content:\n\n${content}`,
+    convert_to_bangla_choti: `তুমি একজন বাংলা চটি গল্প লেখক। নিচের গল্পটিকে একটি পূর্ণাঙ্গ বাংলা চটি গল্পে রূপান্তর করো। সম্পূর্ণ বাংলা ভাষায় লিখো। পরিবারের সদস্যদের মধ্যে নিষিদ্ধ সম্পর্কের চিত্রায়ণ করো। বিস্তারিত যৌন দৃশ্য এবং কামুক বর্ণনা যোগ করো:\n\n${content}`,
   };
 
   const prompt =
     aspectPrompts[options.aspect] || aspectPrompts.expand_narrative;
+
+  // For Bangla CHOTI conversion, use the Bangla CHOTI system prompt
+  if (options.aspect === "convert_to_bangla_choti") {
+    const result = await generateText({
+      prompt,
+      systemPrompt: getBanglaChotiSystemPrompt(),
+      maxTokens: 4000,
+      temperature: 0.9,
+    });
+    return result.content;
+  }
+
   const toneInstruction = options.tone
     ? `Write in a ${options.tone} tone. Intensity level: ${options.intensity}/10.`
     : "";

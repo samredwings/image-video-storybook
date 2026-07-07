@@ -17,9 +17,10 @@ const GENRES = [
   "HORROR",
   "COMEDY",
   "OTHER",
+  "BANGLA_INCEST_CHOTI",
 ];
 
-const RATINGS = ["G", "PG", "PG_13", "R", "NC_17", "X"];
+const RATINGS = ["G", "PG", "PG_13", "R", "NC_17", "X", "XXX"];
 
 export default function CreateStory() {
   const router = useRouter();
@@ -29,6 +30,8 @@ export default function CreateStory() {
     prompt: "",
     genre: "ROMANCE",
     contentRating: "R",
+    language: "ENGLISH",
+    chotiMode: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,7 +127,7 @@ export default function CreateStory() {
               >
                 {GENRES.map((g) => (
                   <option key={g} value={g}>
-                    {g}
+                    {g === "BANGLA_INCEST_CHOTI" ? "🇧🇩 Bangla Incest CHOTI" : g}
                   </option>
                 ))}
               </select>
@@ -148,6 +151,61 @@ export default function CreateStory() {
               </select>
             </div>
           </div>
+
+          {/* Language & CHOTI Mode (only shown for certain genres) */}
+          {(formData.genre === "BANGLA_INCEST_CHOTI" ||
+            formData.genre === "EROTICA") && (
+            <div className="grid grid-cols-2 gap-4 p-4 bg-purple-900/20 border border-purple-500/20 rounded-lg">
+              <div>
+                <label className="block text-white font-semibold mb-2">
+                  Language
+                </label>
+                <select
+                  value={formData.language}
+                  onChange={(e) =>
+                    setFormData({ ...formData, language: e.target.value })
+                  }
+                  className="w-full bg-gray-900 border border-purple-500/30 rounded px-4 py-2 text-white focus:outline-none focus:border-purple-500"
+                >
+                  <option value="ENGLISH">English</option>
+                  <option value="BANGLA">🇧🇩 বাংলা (Bangla)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-white font-semibold mb-2">
+                  CHOTI Mode
+                </label>
+                <div className="flex items-center space-x-3 mt-2">
+                  <button
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        chotiMode: !formData.chotiMode,
+                      })
+                    }
+                    className={`relative w-14 h-7 rounded-full transition ${
+                      formData.chotiMode ? "bg-pink-600" : "bg-gray-600"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition ${
+                        formData.chotiMode ? "left-7" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-gray-300 text-sm">
+                    {formData.chotiMode ? "বাংলা চটি সক্রিয়" : "Off"}
+                  </span>
+                </div>
+                {formData.chotiMode && (
+                  <p className="text-pink-400 text-xs mt-2">
+                    Story will be written in Bangla CHOTI format (Bangla incest
+                    erotic fiction)
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Submit */}
           <button

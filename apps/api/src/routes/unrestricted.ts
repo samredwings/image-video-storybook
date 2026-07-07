@@ -1,7 +1,11 @@
 import { Router, Response } from "express";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
-import { generateText, generateImage } from "../utils/ai-provider";
+import {
+  generateText,
+  generateImage,
+  getBanglaChotiSystemPrompt,
+} from "../utils/ai-provider";
 
 const router = Router();
 
@@ -14,6 +18,8 @@ const generationSchema = z.object({
   negativePrompt: z.string().optional(),
   numSteps: z.number().min(1).max(100).default(30),
   guidanceScale: z.number().min(1).max(20).default(7.5),
+  language: z.enum(["ENGLISH", "BANGLA"]).optional(),
+  chotiMode: z.boolean().optional(),
 });
 
 // POST /api/unrestricted/generate — Fully unrestricted content generation
@@ -103,6 +109,17 @@ router.post(
 );
 
 async function generateUnrestrictedText(data: any): Promise<string> {
+  // Bangla CHOTI mode
+  if (data.language === "BANGLA" || data.chotiMode) {
+    const result = await generateText({
+      prompt: data.prompt,
+      systemPrompt: getBanglaChotiSystemPrompt(),
+      maxTokens: 4000,
+      temperature: 0.95,
+    });
+    return result.content;
+  }
+
   const result = await generateText({
     prompt: data.prompt,
     systemPrompt:
