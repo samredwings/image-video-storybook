@@ -16,6 +16,11 @@ import storyRoutes from './routes/stories';
 import sceneRoutes from './routes/scenes';
 import nsfwRoutes from './routes/nsfw';
 import dashboardRoutes from './routes/dashboard';
+import modelsRoutes from './routes/models';
+import creativeRoutes from './routes/creative';
+import videosRoutes from './routes/videos';
+import publishingRoutes from './routes/publishing';
+import roleplayRoutes from './routes/roleplay';
 
 const app = express();
 
@@ -32,6 +37,7 @@ app.get('/health', (req, res) => {
 
 // Public routes
 app.use('/api/auth', authRoutes);
+app.use('/api/models', modelsRoutes);
 
 // Protected routes
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
@@ -40,6 +46,11 @@ app.use('/api/characters', authMiddleware, characterRoutes);
 app.use('/api/stories', authMiddleware, storyRoutes);
 app.use('/api/scenes', authMiddleware, sceneRoutes);
 app.use('/api/content/nsfw', authMiddleware, nsfwRoutes);
+app.use('/api/creative', authMiddleware, creativeRoutes);
+app.use('/api/videos', authMiddleware, videosRoutes);
+app.use('/api/publish', authMiddleware, publishingRoutes);
+app.use('/api/export', authMiddleware, publishingRoutes);
+app.use('/api/roleplay', authMiddleware, roleplayRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -53,6 +64,9 @@ const PORT = config.port;
 
 app.listen(PORT, () => {
   console.log(`🚀 API server running on port ${PORT}`);
+  console.log(`✨ Uncensored Model Support: ENABLED`);
+  console.log(`🔥 NSFW Roleplay AI: ACTIVE`);
+  console.log(`🎬 Video Generation: READY`);
 });
 
 export default app;
