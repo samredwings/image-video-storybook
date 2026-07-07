@@ -1,11 +1,28 @@
-import { Router, Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
-import axios from 'axios';
-import { z } from 'zod';
+import { Router, Response } from "express";
+import { AuthRequest } from "../middleware/auth";
+import { PrismaClient } from "@prisma/client";
+import Queue from "bull";
+import { z } from "zod";
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// ─── Bull Queue for Video Generation ──────────────────────────────────────────
+
+const videoQueue = new Queue(
+  "video-generation",
+  process.env.REDIS_URL || "redis://localhost:6379",
+  {
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 5000 },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    },
+  },
+);
+
+// ─── Validation Schema ────────────────────────────────────────────────────────
 
 const generateVideoSchema = z.object({
   sceneId: z.string(),
@@ -13,36 +30,40 @@ const generateVideoSchema = z.object({
   prompt: z.string(),
   duration: z.number().default(5),
   motionStrength: z.number().default(0.7),
-  provider: z.enum(['RUNWAY', 'PIKA', 'COGVIDEOX']).default('RUNWAY'),
-  aspectRatio: z.enum(['16:9', '9:16', '1:1']).default('16:9'),
-  quality: z.enum(['standard', 'high', 'cinema']).default('high'),
+  provider: z.enum(["RUNWAY", "PIKA", "COGVIDEOX"]).default("RUNWAY"),
+  aspectRatio: z.enum(["16:9", "9:16", "1:1"]).default("16:9"),
+  quality: z.enum(["standard", "high", "cinema"]).default("high"),
 });
 
-const VIDEO_GENERATION_QUEUE: any[] = [];
+// ─── POST /api/videos/generate ────────────────────────────────────────────────
 
-// POST /api/videos/generate
-router.post('/', async (req: AuthRequest, res: Response) => {
+router.post("/", async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const data = generateVideoSchema.parse(req.body);
 
+    // Verify scene ownership
     const scene = await prisma.scene.findUnique({
       where: { id: data.sceneId },
-      include: {
-        story: true,
-      },
+      include: { story: true },
     });
 
     if (!scene || scene.story?.userId !== userId) {
-      return res.status(404).json({ error: 'Scene not found' });
+      return res.status(404).json({ error: "Scene not found" });
     }
 
-    // Create generation job
+    // Update scene status
+    await prisma.scene.update({
+      where: { id: data.sceneId },
+      data: { status: "GENERATING_VIDEO" },
+    });
+
+    // Create generation job in database
     const job = await prisma.generationJob.create({
       data: {
         sceneId: data.sceneId,
         provider: data.provider,
-        status: 'QUEUED',
+        status: "QUEUED",
         prompt: data.prompt,
         imageUrl: data.imageUrl,
         motionStrength: data.motionStrength,
@@ -54,43 +75,70 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Queue for processing
-    VIDEO_GENERATION_QUEUE.push(job);
-
-    // Start async processing
-    processVideoGeneration(job, data).catch((error) => {
-      console.error('Video generation failed:', error);
-    });
+    // Add to Bull queue for async processing
+    await videoQueue.add(
+      {
+        jobId: job.id,
+        sceneId: data.sceneId,
+        provider: data.provider,
+        prompt: data.prompt,
+        imageUrl: data.imageUrl,
+        motionStrength: data.motionStrength,
+        duration: data.duration,
+        metadata: { aspectRatio: data.aspectRatio, quality: data.quality },
+        userId,
+      },
+      {
+        jobId: job.id,
+        priority:
+          data.quality === "cinema" ? 1 : data.quality === "high" ? 2 : 3,
+      },
+    );
 
     res.status(202).json({
       success: true,
       jobId: job.id,
-      status: 'QUEUED',
-      message: 'Video generation queued successfully',
+      status: "QUEUED",
+      message: "Video generation queued successfully",
+      estimatedTime: data.provider === "COGVIDEOX" ? 180 : 120,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('Video generation error:', error);
-    res.status(500).json({ error: 'Failed to generate video' });
+    console.error("Video generation error:", error);
+    res.status(500).json({ error: "Failed to generate video" });
   }
 });
 
-// GET /api/videos/job/:jobId
-router.get('/job/:jobId', async (req: AuthRequest, res: Response) => {
+// ─── GET /api/videos/job/:jobId ───────────────────────────────────────────────
+
+router.get("/job/:jobId", async (req: AuthRequest, res: Response) => {
   try {
     const { jobId } = req.params;
 
     const job = await prisma.generationJob.findUnique({
       where: { id: jobId },
-      include: {
-        scenes: true,
-      },
+      include: { scenes: true },
     });
 
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    // Also check Bull queue for real-time status
+    let queueStatus = null;
+    try {
+      const bullJob = await videoQueue.getJob(jobId);
+      if (bullJob) {
+        queueStatus = {
+          bullStatus: await bullJob.getState(),
+          attemptsMade: bullJob.attemptsMade,
+          timestamp: bullJob.timestamp,
+        };
+      }
+    } catch {
+      // Bull queue might not be connected; fall back to DB status
     }
 
     res.json({
@@ -100,136 +148,43 @@ router.get('/job/:jobId', async (req: AuthRequest, res: Response) => {
       resultVideoUrl: job.resultVideoUrl,
       resultThumbnail: job.resultThumbnail,
       errorMessage: job.errorMessage,
+      retryCount: job.retryCount,
       createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
       completedAt: job.completedAt,
+      ...(queueStatus && { queue: queueStatus }),
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch job status' });
+    res.status(500).json({ error: "Failed to fetch job status" });
   }
 });
 
-// Helper function to process video generation
-async function processVideoGeneration(job: any, data: any) {
-  try {
-    await prisma.generationJob.update({
-      where: { id: job.id },
-      data: { status: 'PROCESSING' },
-    });
+// ─── GET /api/videos/providers ────────────────────────────────────────────────
 
-    let videoUrl: string;
-    let thumbnail: string;
-
-    if (data.provider === 'RUNWAY') {
-      ({ videoUrl, thumbnail } = await generateWithRunway(data));
-    } else if (data.provider === 'PIKA') {
-      ({ videoUrl, thumbnail } = await generateWithPika(data));
-    } else if (data.provider === 'COGVIDEOX') {
-      ({ videoUrl, thumbnail } = await generateWithCogVideoX(data));
-    } else {
-      throw new Error('Unsupported provider');
-    }
-
-    await prisma.generationJob.update({
-      where: { id: job.id },
-      data: {
-        status: 'COMPLETED',
-        progress: 100,
-        resultVideoUrl: videoUrl,
-        resultThumbnail: thumbnail,
-        completedAt: new Date(),
-      },
-    });
-
-    // Update scene with video
-    await prisma.scene.update({
-      where: { id: job.sceneId },
-      data: {
-        videoUrl,
-        status: 'COMPLETED',
-      },
-    });
-  } catch (error) {
-    console.error('Video generation processing error:', error);
-    await prisma.generationJob.update({
-      where: { id: job.id },
-      data: {
-        status: 'FAILED',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      },
-    });
-  }
-}
-
-async function generateWithRunway(data: any): Promise<{ videoUrl: string; thumbnail: string }> {
-  try {
-    const response = await axios.post(
-      'https://api.runwayml.com/v1/videos/generate',
+router.get("/providers", async (_req: AuthRequest, res: Response) => {
+  res.json({
+    providers: [
       {
-        image_url: data.imageUrl,
-        prompt: data.prompt,
-        duration: data.duration,
-        motion_strength: data.motionStrength,
+        id: "RUNWAY",
+        name: "Runway ML",
+        description: "Advanced AI video generation",
+        supportsAdultContent: true,
       },
       {
-        headers: {
-          Authorization: `Bearer ${process.env.RUNWAY_API_KEY}`,
-        },
-      }
-    );
-
-    return {
-      videoUrl: response.data.video_url,
-      thumbnail: response.data.thumbnail_url,
-    };
-  } catch (error) {
-    throw new Error('Runway video generation failed');
-  }
-}
-
-async function generateWithPika(data: any): Promise<{ videoUrl: string; thumbnail: string }> {
-  try {
-    const response = await axios.post(
-      'https://api.pika.art/v1/videos/generate',
-      {
-        image_url: data.imageUrl,
-        prompt: data.prompt,
-        duration: data.duration,
+        id: "PIKA",
+        name: "Pika Labs",
+        description: "Creative video generation",
+        supportsAdultContent: true,
       },
       {
-        headers: {
-          Authorization: `Bearer ${process.env.PIKA_API_KEY}`,
-        },
-      }
-    );
-
-    return {
-      videoUrl: response.data.video_url,
-      thumbnail: response.data.thumbnail_url,
-    };
-  } catch (error) {
-    throw new Error('Pika video generation failed');
-  }
-}
-
-async function generateWithCogVideoX(data: any): Promise<{ videoUrl: string; thumbnail: string }> {
-  try {
-    const response = await axios.post(
-      'https://cogvideox-service.example.com/generate',
-      {
-        image_url: data.imageUrl,
-        prompt: data.prompt,
-        duration: data.duration,
-        motion_strength: data.motionStrength,
-      }
-    );
-
-    return {
-      videoUrl: response.data.video_url,
-      thumbnail: response.data.thumbnail_url,
-    };
-  } catch (error) {
-    throw new Error('CogVideoX generation failed');
-  }
-}
+        id: "COGVIDEOX",
+        name: "CogVideoX",
+        description: "Open-source video generation",
+        supportsAdultContent: true,
+      },
+    ],
+    unrestrictedMode: true,
+  });
+});
 
 export default router;

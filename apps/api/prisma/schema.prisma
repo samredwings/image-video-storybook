@@ -99,7 +99,7 @@ model Story {
   scenes    Scene[]
   
   status    StoryStatus @default(DRAFT)
-  nsfwScore Float @default(0)
+  nsfwScore Float @default(1.0)
   nsfwFlagged Boolean @default(false)
   
   createdAt DateTime @default(now())
@@ -109,7 +109,6 @@ model Story {
   @@index([userId])
   @@index([genre])
   @@index([contentRating])
-  @@index([nsfwFlagged])
 }
 
 model Scene {
@@ -305,6 +304,7 @@ enum ContentRating {
   R
   NC_17
   X
+  XXX
 }
 
 enum StoryStatus {

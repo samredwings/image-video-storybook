@@ -1,9 +1,10 @@
-import { Router, Response } from 'express';
-import bcryptjs from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-import { config } from '../config';
-import { z } from 'zod';
+import { Router, Response } from "express";
+import bcryptjs from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { PrismaClient } from "@prisma/client";
+import { config } from "../config";
+import { z } from "zod";
+import { AuthRequest } from "../middleware/auth";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -22,7 +23,7 @@ const loginSchema = z.object({
 });
 
 // POST /api/auth/register
-router.post('/register', async (req: Request, res: Response) => {
+router.post("/register", async (req: AuthRequest, res: Response) => {
   try {
     const data = registerSchema.parse(req.body);
 
@@ -33,7 +34,9 @@ router.post('/register', async (req: Request, res: Response) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({ error: 'Email or username already exists' });
+      return res
+        .status(400)
+        .json({ error: "Email or username already exists" });
     }
 
     const hashedPassword = await bcryptjs.hash(data.password, 10);
@@ -63,13 +66,13 @@ router.post('/register', async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    console.error("Registration error:", error);
+    res.status(500).json({ error: "Registration failed" });
   }
 });
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post("/login", async (req: Request, res: Response) => {
   try {
     const data = loginSchema.parse(req.body);
 
@@ -78,13 +81,16 @@ router.post('/login', async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    const isPasswordValid = await bcryptjs.compare(data.password, user.password);
+    const isPasswordValid = await bcryptjs.compare(
+      data.password,
+      user.password,
+    );
 
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: "Invalid email or password" });
     }
 
     const token = jwt.sign({ userId: user.id }, config.jwtSecret, {
@@ -105,8 +111,8 @@ router.post('/login', async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Login failed" });
   }
 });
 

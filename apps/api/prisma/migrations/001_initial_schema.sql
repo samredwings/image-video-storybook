@@ -11,7 +11,7 @@ CREATE TYPE "StoryboardStatus" AS ENUM ('DRAFT', 'IN_PROGRESS', 'COMPLETED', 'PU
 CREATE TYPE "StoryGenre" AS ENUM ('ROMANCE', 'FANTASY', 'SCI_FI', 'DRAMA', 'MYSTERY', 'ADVENTURE', 'EROTICA', 'THRILLER', 'HORROR', 'COMEDY', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "ContentRating" AS ENUM ('G', 'PG', 'PG_13', 'R', 'NC_17', 'X');
+CREATE TYPE "ContentRating" AS ENUM ('G', 'PG', 'PG_13', 'R', 'NC_17', 'X', 'XXX');
 
 -- CreateEnum
 CREATE TYPE "StoryStatus" AS ENUM ('DRAFT', 'IN_PROGRESS', 'COMPLETED', 'PUBLISHED', 'ARCHIVED');

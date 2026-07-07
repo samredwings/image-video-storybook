@@ -1,7 +1,7 @@
 {
   "name": "image-video-storybook",
   "version": "1.0.0",
-  "description": "Image-to-video visual storybook with NSFW support",
+  "description": "Professional NSFW Image-to-Video Storybook Platform — Unrestricted Content Generation",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -21,7 +21,9 @@
     "test:coverage": "turbo run test:coverage",
     "db:migrate": "cd apps/api && npm run db:migrate",
     "db:seed": "cd apps/api && npm run db:seed",
-    "db:studio": "cd apps/api && npm run db:studio"
+    "db:studio": "cd apps/api && npm run db:studio",
+    "worker:dev": "cd apps/worker && npm run dev",
+    "worker:start": "cd apps/worker && npm run start"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
