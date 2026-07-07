@@ -22,6 +22,7 @@ import roleplayRoutes from "./routes/roleplay";
 import offlineRoutes from "./routes/offline";
 import unrestrictedRoutes from "./routes/unrestricted";
 import nsfwRoutes from "./routes/nsfw";
+import userKeysRoutes from "./routes/user-keys";
 
 const app = express();
 
@@ -38,6 +39,8 @@ app.get("/health", (req, res) => {
     status: "ok",
     timestamp: new Date().toISOString(),
     mode: "UNRESTRICTED",
+    pricing:
+      "FREE — no paid API keys required. BYOK available for premium providers.",
   });
 });
 
@@ -59,6 +62,7 @@ app.use("/api/export", authMiddleware, publishingRoutes);
 app.use("/api/roleplay", authMiddleware, roleplayRoutes);
 app.use("/api/unrestricted", authMiddleware, unrestrictedRoutes);
 app.use("/api/content", authMiddleware, nsfwRoutes);
+app.use("/api/user/keys", authMiddleware, userKeysRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -78,13 +82,16 @@ app.listen(PORT, () => {
     "╔═══════════════════════════════════════════════════════════════╗",
   );
   console.log(
-    "║              STORYBOOK STUDIO — PROFESSIONAL API            ║",
+    "║              STORYBOOK STUDIO — FREE CREATIVE API           ║",
   );
   console.log(
     "╠═══════════════════════════════════════════════════════════════╣",
   );
   console.log(
     `║  Mode:      UNRESTRICTED  —  No content restrictions active   ║`,
+  );
+  console.log(
+    `║  Pricing:   FREE  —  No paid API keys required                ║`,
   );
   console.log(
     `║  Port:      ${String(PORT).padEnd(10)}                                          ║`,
@@ -99,7 +106,7 @@ app.listen(PORT, () => {
     "║  FEATURES:                                                   ║",
   );
   console.log(
-    "║  ✓ AI Story Generation (OpenAI GPT-4)                        ║",
+    "║  ✓ AI Story Generation (Free — HuggingFace)                  ║",
   );
   console.log(
     "║  ✓ Adult Content — No Restrictions                           ║",
@@ -108,13 +115,16 @@ app.listen(PORT, () => {
     "║  ✓ NSFW Roleplay AI Companion                                ║",
   );
   console.log(
-    "║  ✓ Video Generation (Runway / Pika / CogVideoX)              ║",
+    "║  ✓ Video Generation (Free — CogVideoX)                       ║",
   );
   console.log(
-    "║  ✓ Facial Accuracy Preservation                              ║",
+    "║  ✓ Image Generation (Free — Stable Diffusion XL)             ║",
   );
   console.log(
     "║  ✓ Uncensored Model Support (HuggingFace / Local)            ║",
+  );
+  console.log(
+    "║  ✓ BYOK — Bring Your Own Key for premium providers           ║",
   );
   console.log(
     "║  ✓ Offline Mode for Low-RAM Devices                          ║",
@@ -127,6 +137,13 @@ app.listen(PORT, () => {
   );
   console.log(
     "╚═══════════════════════════════════════════════════════════════╝",
+  );
+  console.log("");
+  console.log(
+    "  🆓  Free Tier:  HuggingFace (free signup) for text, images & video",
+  );
+  console.log(
+    "  🔑  BYOK:       OpenAI GPT-4, Runway ML, Pika Labs, ElevenLabs",
   );
   console.log("");
 });

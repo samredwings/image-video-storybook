@@ -2,28 +2,56 @@
 
 ## 🎬 Platform Overview
 
-A fully unrestricted, professional-grade platform for AI-powered adult content creation. Zero content filters. Zero restrictions. Maximum creative freedom.
+A fully unrestricted, professional-grade platform for AI-powered adult content creation. **100% free to use** — no paid API keys required. Zero content filters. Zero restrictions. Maximum creative freedom.
+
+## 💰 Pricing Model
+
+| Tier        | Cost                     | Requirements                | Features                                        |
+| ----------- | ------------------------ | --------------------------- | ----------------------------------------------- |
+| **Free** 🆓 | **$0**                   | Free HuggingFace account    | Text, image & video generation with free models |
+| **BYOK** 🔑 | Free app + your API keys | Your own paid subscriptions | OpenAI GPT-4, Runway, Pika, ElevenLabs          |
+
+### Free Tier (Default)
+
+- ✅ **HuggingFace** — Free text generation (Mistral 7B, Llama 2, Zephyr)
+- ✅ **Stable Diffusion XL** — Free uncensored image generation
+- ✅ **CogVideoX** — Free open-source video generation
+- ✅ **All NSFW/adult content** — No restrictions
+- ✅ **Unlimited generations** — Subject to HuggingFace free tier rate limits
+
+**To activate free tier:** Sign up at [huggingface.co/join](https://huggingface.co/join) → Generate a free token at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → Set `HUGGINGFACE_API_KEY` in your `.env`
+
+### BYOK (Bring Your Own Key — Optional)
+
+Premium providers available when you add your own API keys in Settings:
+
+- **OpenAI GPT-4** — Premium story quality
+- **Runway ML** — Advanced video generation
+- **Pika Labs** — Creative video generation
+- **ElevenLabs** — Professional voice narration
 
 ## 🚀 Core Capabilities
 
 ### Content Generation
 
-- ✅ **Unrestricted AI Story Generation** — GPT-4 / LLama 2 / Mistral uncensored models
+- ✅ **Unrestricted AI Story Generation** — Mistral 7B / Llama 2 / GPT-4 (BYOK)
 - ✅ **NSFW Roleplay AI Companion** — Interactive adult conversations with character AI
-- ✅ **Adult Video Generation** — Runway ML, Pika Labs, CogVideoX (all unrestricted)
+- ✅ **Adult Video Generation** — CogVideoX (free) / Runway ML / Pika Labs (BYOK)
 - ✅ **Uncensored Image Generation** — Stable Diffusion XL with facial accuracy preservation
 - ✅ **Explicit Content Enhancement** — AI-powered erotic scene expansion and enrichment
 
 ### Advanced Features
 
 - 🔥 **ZERO Content Restrictions** — No NSFW filters, no moderation, no blocking
+- 🆓 **100% Free Defaults** — No paid API keys required to use the platform
+- 🔑 **BYOK Support** — Bring your own premium API keys for enhanced quality
 - 🎯 **Facial Accuracy Preservation** — 99%+ facial feature preservation in generated content
 - 💎 **Unrestricted Generation** — All content types, all ratings, no limitations
 - 📱 **Offline Models** — Low-RAM device support (3GB-6GB) for private generation
-- 🌐 **Multi-Provider AI** — OpenAI, HuggingFace, Runway, Pika, local models
+- 🌐 **Multi-Provider AI** — HuggingFace (free), OpenAI / Runway / Pika (BYOK)
 - ⚡ **Async Job Processing** — Bull Queue with Redis for scalable video generation
 - 🔄 **Chat-to-Story Pipeline** — Convert roleplay conversations into full narratives
-- 🎨 **Style Transfer** — Apply artistic styles to generated imagery
+- 🎨 **Style Transfer** — Apply artistic styles to generated imagery (free / BYOK)
 
 ### Platform Architecture
 
@@ -158,16 +186,29 @@ Monorepo (Turborepo)
 
 ### AI/ML Providers
 
-- **Text:** OpenAI GPT-4, HuggingFace (Llama 2, Mistral), Local models
-- **Image:** Stable Diffusion XL, Face Preservation GAN
-- **Video:** Runway ML, Pika Labs, CogVideoX
-- **Voice:** ElevenLabs TTS
-- **Style Transfer:** Replicate API
+| Provider                | Tier    | Cost     | Use Case                                   |
+| ----------------------- | ------- | -------- | ------------------------------------------ |
+| **HuggingFace**         | Free 🆓 | $0       | Text generation (Mistral, Llama 2, Zephyr) |
+| **Stable Diffusion XL** | Free 🆓 | $0       | Image generation via HuggingFace           |
+| **CogVideoX**           | Free 🆓 | $0       | Video generation via HuggingFace           |
+| **OpenAI GPT-4**        | BYOK 🔑 | Your key | Premium text/roleplay                      |
+| **Runway ML**           | BYOK 🔑 | Your key | Premium video generation                   |
+| **Pika Labs**           | BYOK 🔑 | Your key | Premium video generation                   |
+| **ElevenLabs**          | BYOK 🔑 | Your key | Professional voice TTS                     |
 
 ## 🌐 Environment
 
 ```env
-# Mode
+# Free tier (no payment needed):
+HUGGINGFACE_API_KEY=hf_your_free_token
+
+# BYOK (optional, premium):
+# OPENAI_API_KEY=sk-...
+# RUNWAY_API_KEY=...
+# PIKA_API_KEY=...
+# ELEVENLABS_API_KEY=...
+
+# Mode (no restrictions):
 UNRESTRICTED_MODE=true
 NSFW_DETECTION_ENABLED=false
 ADULT_CONTENT_ALLOWED=true
@@ -184,6 +225,7 @@ CONTENT_FILTERING=none
 - All AI models configured without safety filters
 - Facial accuracy at maximum by default
 - Adult content always allowed
+- **No paid API keys required** — free tier works out of the box
 
 ## ⚡ Performance
 
@@ -203,6 +245,7 @@ image-video-storybook/
 ├── apps/
 │   ├── api/src/routes/     # 14 Express route modules
 │   ├── api/src/middleware/  # Auth & error handling
+│   ├── api/src/utils/       # AI provider routing (free-first)
 │   ├── api/prisma/          # Schema, migrations, seed
 │   ├── web/src/app/         # Next.js pages & components
 │   └── worker/src/          # Bull queue worker

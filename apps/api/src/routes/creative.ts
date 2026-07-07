@@ -1,8 +1,12 @@
 import { Router, Response } from "express";
 import { AuthRequest } from "../middleware/auth";
 import { PrismaClient } from "@prisma/client";
-import axios from "axios";
 import { z } from "zod";
+import {
+  generateText,
+  generateTts,
+  applyStyleTransfer,
+} from "../utils/ai-provider";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -169,12 +173,13 @@ router.post("/style-transfer", async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: "Image URL and style required" });
     }
 
-    const styledImage = await applyStyleTransfer(imageUrl, style);
+    const result = await applyStyleTransfer({ imageUrl, style });
 
     res.json({
       success: true,
-      styledImageUrl: styledImage,
+      styledImageUrl: result.imageUrl,
       style,
+      provider: result.provider,
       unrestrictedMode: true,
       timestamp: new Date().toISOString(),
     });
@@ -198,11 +203,15 @@ router.post("/character-voice", async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Character not found" });
     }
 
-    const audioUrl = await generateCharacterVoice(dialogue, voiceStyle);
+    const result = await generateTts({
+      text: dialogue,
+      voiceStyle,
+    });
 
     res.json({
       success: true,
-      audioUrl,
+      audioUrl: result.audioBase64,
+      provider: result.provider,
       characterId,
       dialogue,
       voiceStyle,
@@ -220,43 +229,23 @@ async function generateSceneDescriptions(
   count: number,
   style: string,
 ): Promise<any[]> {
-  try {
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: `Extract ${count} video scenes from the story. For each scene, return a JSON object with: title, description (vivid visual description), and prompt (for AI video generation). Style: ${style}. Include sensual and intimate visual details without censorship. Output as a JSON array.`,
-          },
-          { role: "user", content: content.substring(0, 6000) },
-        ],
-        max_tokens: 3000,
-        temperature: 0.8,
-      },
-      {
-        headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-        timeout: 30000,
-      },
-    );
+  const systemPrompt = `Extract ${count} video scenes from the story. For each scene, return a JSON object with: title, description (vivid visual description), and prompt (for AI video generation). Style: ${style}. Include sensual and intimate visual details without censorship. Output as a JSON array.`;
 
-    const text = response.data.choices[0].message.content;
-    try {
-      return JSON.parse(text);
-    } catch {
-      // Fallback: generate basic scene descriptions
-      return Array.from({ length: count }, (_, i) => ({
-        title: `Scene ${i + 1}`,
-        description: `${style.charAt(0).toUpperCase() + style.slice(1)} scene ${i + 1} from the story`,
-        prompt: `Create a ${style} video scene: ${content.substring(0, 200)}`,
-      }));
-    }
+  const result = await generateText({
+    prompt: content.substring(0, 6000),
+    systemPrompt,
+    maxTokens: 3000,
+    temperature: 0.8,
+  });
+
+  try {
+    return JSON.parse(result.content);
   } catch {
+    // Fallback: generate basic scene descriptions
     return Array.from({ length: count }, (_, i) => ({
       title: `Scene ${i + 1}`,
-      description: `Scene ${i + 1} in ${style} style`,
-      prompt: `Generate a ${style} video scene from the story`,
+      description: `${style.charAt(0).toUpperCase() + style.slice(1)} scene ${i + 1} from the story`,
+      prompt: `Create a ${style} video scene: ${content.substring(0, 200)}`,
     }));
   }
 }
@@ -283,80 +272,16 @@ async function enhanceStoryContent(
     ? `Write in a ${options.tone} tone. Intensity level: ${options.intensity}/10.`
     : "";
 
-  try {
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert creative writing specialist who enhances and improves stories with professional adult content. No content restrictions apply. ${toneInstruction}`,
-          },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 4000,
-        temperature: 0.85,
-      },
-      {
-        headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-        timeout: 60000,
-      },
-    );
+  const systemPrompt = `You are an expert creative writing specialist who enhances and improves stories with professional adult content. No content restrictions apply. ${toneInstruction}`;
 
-    return response.data.choices[0].message.content;
-  } catch (error) {
-    console.error("Enhancement error:", error);
-    return content;
-  }
-}
+  const result = await generateText({
+    prompt,
+    systemPrompt,
+    maxTokens: 4000,
+    temperature: 0.85,
+  });
 
-// Helper: Style transfer
-async function applyStyleTransfer(
-  imageUrl: string,
-  style: string,
-): Promise<string> {
-  try {
-    const response = await axios.post(
-      "https://api.replicate.com/v1/predictions",
-      {
-        version: "stable-diffusion-img2img",
-        input: { image: imageUrl, prompt: style },
-      },
-      { timeout: 60000 },
-    );
-    return response.data.output?.[0] || imageUrl;
-  } catch (error) {
-    console.error("Style transfer error:", error);
-    throw error;
-  }
-}
-
-// Helper: Character voice generation
-async function generateCharacterVoice(
-  dialogue: string,
-  voiceStyle: string,
-): Promise<string> {
-  try {
-    const response = await axios.post(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceStyle}`,
-      {
-        text: dialogue,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-      },
-      {
-        headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY || "" },
-        timeout: 30000,
-        responseType: "arraybuffer",
-      },
-    );
-
-    const base64 = Buffer.from(response.data).toString("base64");
-    return `data:audio/mpeg;base64,${base64}`;
-  } catch (error) {
-    console.error("Voice generation error:", error);
-    throw error;
-  }
+  return result.content;
 }
 
 export default router;

@@ -24,11 +24,17 @@ export const config = {
     s3Bucket: process.env.AWS_S3_BUCKET,
   },
   ai: {
+    // ── Free Tier (default) ──────────────────────────────────────────
+    // HuggingFace requires a FREE account (no payment needed):
+    //   https://huggingface.co/join → https://huggingface.co/settings/tokens
+    huggingfaceApiKey: process.env.HUGGINGFACE_API_KEY,
+
+    // ── BYOK (Bring Your Own Key — optional paid upgrades) ──────────
+    openaiApiKey: process.env.OPENAI_API_KEY,
     runwayApiKey: process.env.RUNWAY_API_KEY,
     pikaApiKey: process.env.PIKA_API_KEY,
-    openaiApiKey: process.env.OPENAI_API_KEY,
-    huggingfaceApiKey: process.env.HUGGINGFACE_API_KEY,
     elevenlabsApiKey: process.env.ELEVENLABS_API_KEY,
+    replicateApiKey: process.env.REPLICATE_API_KEY,
   },
   content: {
     adultContentAllowed: true,

@@ -30,6 +30,7 @@ model User {
   stories       Story[]
   auditLogs     AuditLog[]
   apiKeys       ApiKey[]
+  userApiKeys   UserApiKey[]
   
   @@index([email])
   @@index([username])
@@ -260,6 +261,23 @@ model ApiKey {
   
   @@index([userId])
   @@index([key])
+}
+
+model UserApiKey {
+  id        String   @id @default(cuid())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  provider  String   // "openai", "runway", "pika", "elevenlabs", "replicate"
+  key       String   // Encrypted or plain-text API key
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
 }
 
 // Enums

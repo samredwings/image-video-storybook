@@ -30,12 +30,12 @@ const generateVideoSchema = z.object({
   prompt: z.string(),
   duration: z.number().default(5),
   motionStrength: z.number().default(0.7),
-  provider: z.enum(["RUNWAY", "PIKA", "COGVIDEOX"]).default("RUNWAY"),
+  provider: z.enum(["RUNWAY", "PIKA", "COGVIDEOX"]).default("COGVIDEOX"),
   aspectRatio: z.enum(["16:9", "9:16", "1:1"]).default("16:9"),
-  quality: z.enum(["standard", "high", "cinema"]).default("high"),
+  quality: z.enum(["standard", "high", "cinema"]).default("standard"),
 });
 
-// ─── POST /api/videos/generate ────────────────────────────────────────────────
+// ─── POST /api/videos ────────────────────────────────────────────────────────
 
 router.post("/", async (req: AuthRequest, res: Response) => {
   try {
@@ -100,7 +100,9 @@ router.post("/", async (req: AuthRequest, res: Response) => {
       jobId: job.id,
       status: "QUEUED",
       message: "Video generation queued successfully",
-      estimatedTime: data.provider === "COGVIDEOX" ? 180 : 120,
+      estimatedTime: 180,
+      provider: data.provider,
+      tier: data.provider === "COGVIDEOX" ? "free" : "byok",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -165,25 +167,37 @@ router.get("/providers", async (_req: AuthRequest, res: Response) => {
   res.json({
     providers: [
       {
-        id: "RUNWAY",
-        name: "Runway ML",
-        description: "Advanced AI video generation",
+        id: "COGVIDEOX",
+        name: "CogVideoX (Free)",
+        description:
+          "FREE — Open-source video generation via HuggingFace. Requires free HuggingFace account.",
         supportsAdultContent: true,
+        tier: "free",
+        recommended: true,
+      },
+      {
+        id: "RUNWAY",
+        name: "Runway ML (BYOK)",
+        description:
+          "BYOK — Advanced AI video generation. Requires your own Runway API key.",
+        supportsAdultContent: true,
+        tier: "byok",
+        recommended: false,
       },
       {
         id: "PIKA",
-        name: "Pika Labs",
-        description: "Creative video generation",
+        name: "Pika Labs (BYOK)",
+        description:
+          "BYOK — Creative video generation. Requires your own Pika API key.",
         supportsAdultContent: true,
-      },
-      {
-        id: "COGVIDEOX",
-        name: "CogVideoX",
-        description: "Open-source video generation",
-        supportsAdultContent: true,
+        tier: "byok",
+        recommended: false,
       },
     ],
     unrestrictedMode: true,
+    defaultProvider: "COGVIDEOX",
+    freeTier:
+      "Free video generation uses CogVideoX via HuggingFace — sign up at huggingface.co for a free token.",
   });
 });
 
