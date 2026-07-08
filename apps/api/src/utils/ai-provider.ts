@@ -856,6 +856,11 @@ export async function generateStoryFromImageAnalyses(
     characterDescriptions?: string;
   },
 ): Promise<string> {
+  // Auto-route to Bangla CHOTI version when genre is BANGLA_INCEST_CHOTI
+  if (options.genre === "BANGLA_INCEST_CHOTI") {
+    return generateBanglaStoryFromImageAnalyses(analyses, options);
+  }
+
   const imageSummaries = analyses
     .map(
       (a, i) =>
