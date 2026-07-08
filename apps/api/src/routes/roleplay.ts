@@ -4,6 +4,8 @@ import { z } from "zod";
 import {
   generateText,
   generateChotiDialogueResponse,
+  getBanglaChotiSystemPrompt,
+  getChotiDialogueSystemPrompt,
 } from "../utils/ai-provider";
 
 const router = Router();

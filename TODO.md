@@ -1,0 +1,7 @@
+- [x] Add Capacitor Android wrapper tooling for `apps/web` (install deps + add scriptso- [ ] Add Capacitor Android wrapper tooling for `apps/web` (install deps + add scripts)
+- [ ] Add `apps/web/capacitor.config.*` pointing to Next.js build output
+- [ ] Add minimal web app manifest/icons (optional for packaging; still useful)
+- [ ] Generate/fill `apps/web/android/` scaffold (via `npx cap add android`)
+- [ ] Sync web assets to Android project (`npx cap sync`)
+- [ ] Build release APK (`npx cap build android`)
+- [ ] Verify resulting APK exists under `apps/web/android/app/build/outputs/apk/...`
