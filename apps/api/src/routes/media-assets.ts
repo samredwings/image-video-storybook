@@ -1,183 +1,171 @@
 import { Router, Response } from "express";
-import { AuthRequest } from "../middleware/auth";
-import { PrismaClient } from "@prisma/client";
+import multer from "multer";
 import { z } from "zod";
+import path from "node:path";
+import crypto from "node:crypto";
+import { AuthRequest } from "../middleware/auth";
+import { prisma } from "../lib/prisma";
+import { isSafeUrl, fetchSafe } from "../lib/security";
+import { logger } from "../lib/logger";
+import { config } from "../config";
 
 const router = Router();
-const prisma = new PrismaClient();
 
-const createAssetSchema = z.object({
-  url: z.string().min(1),
+const ALLOWED_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+]);
+
+const MAX_BYTES = 25 * 1024 * 1024;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_BYTES, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_MIME.has(file.mimetype)) {
+      return cb(new Error("Unsupported image type"));
+    }
+    cb(null, true);
+  },
+});
+
+const remoteUrlSchema = z.object({
+  url: z.string().url(),
   assetType: z.enum(["IMAGE", "VIDEO"]).default("IMAGE"),
-  label: z.string().optional(),
-  description: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  label: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
 });
 
 const updateAssetSchema = z.object({
-  label: z.string().optional(),
-  description: z.string().optional(),
-  sceneOrder: z.number().int().optional(),
-  metadata: z.record(z.any()).optional(),
+  label: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
+  sceneOrder: z.number().int().min(0).max(1000).optional(),
 });
 
-// POST /api/media-assets — Upload/register a new media asset
-router.post("/", async (req: AuthRequest, res: Response) => {
+router.post("/", upload.single("file"), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const data = createAssetSchema.parse(req.body);
 
-    const asset = await prisma.mediaAsset.create({
-      data: {
-        url: data.url,
-        assetType: data.assetType,
-        label: data.label,
-        description: data.description,
-        metadata: data.metadata ? JSON.stringify(data.metadata) : null,
-        userId,
-      },
-    });
+    if (req.file) {
+      const ext = path.extname(req.file.originalname).toLowerCase().slice(0, 8) || ".bin";
+      const safeName = `${crypto.randomUUID()}${ext}`;
+      const buf = req.file.buffer;
 
-    res.status(201).json(asset);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
+      const asset = await prisma.mediaAsset.create({
+        data: {
+          url: `local://${safeName}`,
+          assetType: "IMAGE",
+          label: req.body.label?.slice(0, 200),
+          description: req.body.description?.slice(0, 2000),
+          mimeType: req.file.mimetype,
+          sizeBytes: buf.length,
+          storageKind: "LOCAL",
+          userId,
+        },
+      });
+      return res.status(201).json(asset);
     }
-    console.error("Media asset creation error:", error);
-    res.status(500).json({ error: "Failed to create media asset" });
+
+    if (req.body?.url) {
+      const data = remoteUrlSchema.parse(req.body);
+
+      if (!(await isSafeUrl(data.url))) {
+        return res
+          .status(400)
+          .json({ error: "URL is not allowed (private network or invalid)" });
+      }
+
+      const buf = await fetchSafe(data.url, { maxBytes: MAX_BYTES });
+
+      const asset = await prisma.mediaAsset.create({
+        data: {
+          url: data.url,
+          assetType: data.assetType,
+          label: data.label,
+          description: data.description,
+          sizeBytes: buf.length,
+          storageKind: "REMOTE",
+          userId,
+        },
+      });
+      return res.status(201).json(asset);
+    }
+
+    return res.status(400).json({ error: "Provide a file or url" });
+  } catch (err) {
+    logger.error({ err, userId: req.userId }, "media asset upload failed");
+    res.status(500).json({ error: "Upload failed" });
   }
 });
 
-// POST /api/media-assets/batch — Upload multiple assets at once
-router.post("/batch", async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.userId!;
-    const { assets } = z
-      .object({
-        assets: z.array(createAssetSchema),
-      })
-      .parse(req.body);
-
-    const created = await Promise.all(
-      assets.map((asset) =>
-        prisma.mediaAsset.create({
-          data: {
-            url: asset.url,
-            assetType: asset.assetType,
-            label: asset.label,
-            description: asset.description,
-            metadata: asset.metadata ? JSON.stringify(asset.metadata) : null,
-            userId,
-          },
-        }),
-      ),
-    );
-
-    res.status(201).json(created);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
-    }
-    console.error("Batch asset creation error:", error);
-    res.status(500).json({ error: "Failed to create media assets" });
-  }
-});
-
-// GET /api/media-assets — List all assets for the user
 router.get("/", async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { storyId, assetType } = req.query;
-
-    const where: any = { userId };
-    if (storyId) where.storyId = storyId;
-    if (assetType) where.assetType = assetType;
-
     const assets = await prisma.mediaAsset.findMany({
-      where,
-      orderBy: [{ sceneOrder: "asc" }, { createdAt: "desc" }],
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 100,
     });
-
     res.json(assets);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch media assets" });
+  } catch (err) {
+    logger.error({ err }, "list assets failed");
+    res.status(500).json({ error: "Failed to list assets" });
   }
 });
 
-// GET /api/media-assets/:id
 router.get("/:id", async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
     const userId = req.userId!;
-
     const asset = await prisma.mediaAsset.findUnique({
-      where: { id },
+      where: { id: req.params.id },
     });
-
     if (!asset || asset.userId !== userId) {
-      return res.status(404).json({ error: "Media asset not found" });
+      return res.status(404).json({ error: "Not found" });
     }
-
     res.json(asset);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch media asset" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed" });
   }
 });
 
-// PUT /api/media-assets/:id — Update asset metadata
-router.put("/:id", async (req: AuthRequest, res: Response) => {
+router.patch("/:id", async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
     const userId = req.userId!;
     const data = updateAssetSchema.parse(req.body);
-
     const existing = await prisma.mediaAsset.findUnique({
-      where: { id },
+      where: { id: req.params.id },
     });
-
     if (!existing || existing.userId !== userId) {
-      return res.status(404).json({ error: "Media asset not found" });
+      return res.status(404).json({ error: "Not found" });
     }
-
     const updated = await prisma.mediaAsset.update({
-      where: { id },
-      data: {
-        ...data,
-        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
-      },
+      where: { id: req.params.id },
+      data,
     });
-
     res.json(updated);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
-    }
-    res.status(500).json({ error: "Failed to update media asset" });
+  } catch (err) {
+    res.status(500).json({ error: "Update failed" });
   }
 });
 
-// DELETE /api/media-assets/:id
 router.delete("/:id", async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
     const userId = req.userId!;
-
-    const asset = await prisma.mediaAsset.findUnique({
-      where: { id },
+    const existing = await prisma.mediaAsset.findUnique({
+      where: { id: req.params.id },
     });
-
-    if (!asset || asset.userId !== userId) {
-      return res.status(404).json({ error: "Media asset not found" });
+    if (!existing || existing.userId !== userId) {
+      return res.status(404).json({ error: "Not found" });
     }
-
-    await prisma.mediaAsset.delete({
-      where: { id },
-    });
-
-    res.json({ message: "Media asset deleted" });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to delete media asset" });
+    await prisma.mediaAsset.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: "Delete failed" });
   }
 });
 
 export default router;
+

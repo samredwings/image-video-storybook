@@ -10,6 +10,7 @@ const prisma = new PrismaClient();
 const generateStorySchema = z.object({
   title: z.string().min(1).max(500),
   prompt: z.string().min(10),
+  content: z.string().optional(),
   genre: z.enum([
     "ROMANCE",
     "FANTASY",

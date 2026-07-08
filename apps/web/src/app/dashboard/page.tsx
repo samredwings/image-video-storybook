@@ -92,6 +92,12 @@ export default function Dashboard() {
             >
               বাংলা চটি
             </Link>
+            <Link
+              href="/dashboard/sex-game"
+              className="text-white hover:text-pink-300"
+            >
+              🎮 Sex Game
+            </Link>
           </div>
         </div>
       </nav>
@@ -126,7 +132,7 @@ export default function Dashboard() {
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
           <Link
             href="/dashboard/stories/new"
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg text-center transition"
@@ -156,6 +162,12 @@ export default function Dashboard() {
             className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold py-3 px-6 rounded-lg text-center transition"
           >
             📖 বাংলা চটি
+          </Link>
+          <Link
+            href="/dashboard/sex-game"
+            className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold py-3 px-6 rounded-lg text-center transition"
+          >
+            🎮 Sex Game
           </Link>
         </div>
 

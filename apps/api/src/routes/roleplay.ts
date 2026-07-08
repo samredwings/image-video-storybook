@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PrismaClient } from "@prisma/client";
 import {
   generateText,
+  generateImage,
   generateChotiDialogueResponse,
   getBanglaChotiSystemPrompt,
   getChotiDialogueSystemPrompt,
@@ -22,11 +23,13 @@ const roleplaySchema = z.object({
   chotiMode: z.boolean().optional(),
   relationshipType: z.string().optional(),
   language: z.enum(["ENGLISH", "BANGLA"]).optional(),
+  generateImage: z.boolean().optional().default(false),
 });
 
 // POST /api/roleplay/respond
 router.post("/respond", async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.userId!;
     const data = roleplaySchema.parse(req.body);
 
     const isChotiMode = data.chotiMode || data.language === "BANGLA";
@@ -37,9 +40,41 @@ router.post("/respond", async (req: AuthRequest, res: Response) => {
       chotiMode: isChotiMode,
     });
 
+    let imageUrl: string | null = null;
+
+    // Optionally generate a scene image from the response text
+    if (data.generateImage && response) {
+      try {
+        const imagePrompt = `A sensual erotic scene: ${response.substring(0, 500)}`;
+        const imageResult = await generateImage({
+          prompt: imagePrompt,
+          numSteps: 25,
+          guidanceScale: 7.5,
+        });
+
+        // Save as media asset linked to the story
+        const asset = await prisma.mediaAsset.create({
+          data: {
+            url: imageResult.imageBase64,
+            assetType: "IMAGE",
+            label: `Roleplay scene - ${new Date().toLocaleString()}`,
+            description: response.substring(0, 500),
+            storyId: data.storyId,
+            userId,
+          },
+        });
+
+        imageUrl = `/api/media-assets/${asset.id}`;
+      } catch (imgErr) {
+        console.warn("Roleplay image generation failed:", imgErr);
+        // Non-fatal — still return the text response
+      }
+    }
+
     res.json({
       success: true,
       response,
+      imageUrl,
       timestamp: new Date(),
       provider: "huggingface",
       unrestrictedMode: isChotiMode,
