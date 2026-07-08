@@ -27,7 +27,7 @@ router.post("/generate", async (req: AuthRequest, res: Response) => {
   try {
     const data = generationSchema.parse(req.body);
 
-    let result: any = {
+    const result: any = {
       prompt: data.prompt,
       contentType: data.contentType,
       facialAccuracy: data.facialAccuracy,

@@ -77,7 +77,7 @@ router.get("/", async (req: AuthRequest, res: Response) => {
     const userId = req.userId!;
     const { genre, status } = req.query;
 
-    let where: any = { userId };
+    const where: any = { userId };
     if (genre) where.genre = genre;
     if (status) where.status = status;
 
